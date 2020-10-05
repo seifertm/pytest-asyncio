@@ -166,6 +166,7 @@ Changelog
 ~~~~~~~~~~~~~~~~~~~
 - Add support for Python 3.9
 - Abandon support for Python 3.5. If you still require support for Python 3.5, please use pytest-asyncio v0.14 or earlier.
+- `pytest-asyncio` no longer alters existing event loop policies. `#168 <https://github.com/pytest-dev/pytest-asyncio/issues/168>`_, `#188 <https://github.com/pytest-dev/pytest-asyncio/issues/168>`_
 
 0.14.0 (2020-06-24)
 ~~~~~~~~~~~~~~~~~~~
