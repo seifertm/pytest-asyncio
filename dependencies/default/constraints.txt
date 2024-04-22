@@ -1,6 +1,6 @@
 attrs==23.2.0
 coverage==7.4.4
-exceptiongroup==1.2.0
+exceptiongroup==1.2.1
 hypothesis==6.99.9
 iniconfig==2.0.0
 packaging==24.0
