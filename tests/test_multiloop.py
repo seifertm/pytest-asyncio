@@ -67,4 +67,4 @@ def test_event_loop_override(pytester: Pytester):
         )
     )
     result = pytester.runpytest_subprocess("--asyncio-mode=strict")
-    result.assert_outcomes(passed=2, warnings=2)
+    result.assert_outcomes(passed=2)

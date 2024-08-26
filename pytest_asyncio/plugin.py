@@ -685,20 +685,6 @@ def _temporary_event_loop_policy(policy: AbstractEventLoopPolicy) -> Iterator[No
         asyncio.set_event_loop(old_loop)
 
 
-_REDEFINED_EVENT_LOOP_FIXTURE_WARNING = dedent(
-    """\
-    The event_loop fixture provided by pytest-asyncio has been redefined in
-    %s:%d
-    Replacing the event_loop fixture with a custom implementation is deprecated
-    and will lead to errors in the future.
-    If you want to request an asyncio event loop with a scope other than function
-    scope, use the "scope" argument to the asyncio mark when marking the tests.
-    If you want to return different types of event loops, use the event_loop_policy
-    fixture.
-    """
-)
-
-
 @pytest.hookimpl(tryfirst=True)
 def pytest_generate_tests(metafunc: Metafunc) -> None:
     marker = metafunc.definition.get_closest_marker("asyncio")
@@ -756,16 +742,6 @@ def pytest_fixture_setup(
         )
         outcome = yield
         loop: asyncio.AbstractEventLoop = outcome.get_result()
-        # Weird behavior was observed when checking for an attribute of FixtureDef.func
-        # Instead, we now check for a special attribute of the returned event loop
-        fixture_filename = inspect.getsourcefile(fixturedef.func)
-        if not getattr(loop, "__original_fixture_loop", False):
-            _, fixture_line_number = inspect.getsourcelines(fixturedef.func)
-            warnings.warn(
-                _REDEFINED_EVENT_LOOP_FIXTURE_WARNING
-                % (fixture_filename, fixture_line_number),
-                DeprecationWarning,
-            )
         policy = asyncio.get_event_loop_policy()
         try:
             old_loop = _get_event_loop_no_warn(policy)

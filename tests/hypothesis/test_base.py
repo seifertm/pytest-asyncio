@@ -70,12 +70,7 @@ def test_can_use_explicit_event_loop_fixture(pytester: Pytester):
         )
     )
     result = pytester.runpytest_subprocess("--asyncio-mode=strict", "-W default")
-    result.assert_outcomes(passed=1, warnings=1)
-    result.stdout.fnmatch_lines(
-        [
-            "*event_loop fixture provided by pytest-asyncio has been redefined*",
-        ]
-    )
+    result.assert_outcomes(passed=1)
 
 
 def test_async_auto_marked(pytester: Pytester):

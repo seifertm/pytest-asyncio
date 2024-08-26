@@ -116,7 +116,7 @@ def test_event_loop_fixture_finalizer_raises_warning_when_fixture_leaves_loop_un
         )
     )
     result = pytester.runpytest_subprocess("--asyncio-mode=strict", "-W", "default")
-    result.assert_outcomes(passed=1, warnings=2)
+    result.assert_outcomes(passed=1, warnings=1)
     result.stdout.fnmatch_lines("*unclosed event loop*")
 
 
