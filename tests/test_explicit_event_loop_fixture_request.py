@@ -72,60 +72,6 @@ def test_emit_warning_when_event_loop_is_explicitly_requested_in_coroutine_stati
     )
 
 
-def test_emit_warning_when_event_loop_is_explicitly_requested_in_coroutine_fixture(
-    pytester: Pytester,
-):
-    pytester.makeini("[pytest]\nasyncio_default_fixture_loop_scope = function")
-    pytester.makepyfile(
-        dedent(
-            """\
-            import pytest
-            import pytest_asyncio
-
-            @pytest_asyncio.fixture
-            async def emits_warning(event_loop):
-                pass
-
-            @pytest.mark.asyncio
-            async def test_uses_fixture(emits_warning):
-                pass
-            """
-        )
-    )
-    result = pytester.runpytest_subprocess("--asyncio-mode=strict", "-W default")
-    result.assert_outcomes(passed=1, warnings=1)
-    result.stdout.fnmatch_lines(
-        ['*is asynchronous and explicitly requests the "event_loop" fixture*']
-    )
-
-
-def test_emit_warning_when_event_loop_is_explicitly_requested_in_async_gen_fixture(
-    pytester: Pytester,
-):
-    pytester.makeini("[pytest]\nasyncio_default_fixture_loop_scope = function")
-    pytester.makepyfile(
-        dedent(
-            """\
-            import pytest
-            import pytest_asyncio
-
-            @pytest_asyncio.fixture
-            async def emits_warning(event_loop):
-                yield
-
-            @pytest.mark.asyncio
-            async def test_uses_fixture(emits_warning):
-                pass
-            """
-        )
-    )
-    result = pytester.runpytest_subprocess("--asyncio-mode=strict", "-W default")
-    result.assert_outcomes(passed=1, warnings=1)
-    result.stdout.fnmatch_lines(
-        ['*is asynchronous and explicitly requests the "event_loop" fixture*']
-    )
-
-
 def test_does_not_emit_warning_when_event_loop_is_explicitly_requested_in_sync_function(
     pytester: Pytester,
 ):
