@@ -772,20 +772,6 @@ def _add_finalizers(fixturedef: FixtureDef, *finalizers: Callable[[], object]) -
         fixturedef.addfinalizer(finalizer)
 
 
-_UNCLOSED_EVENT_LOOP_WARNING = dedent(
-    """\
-    pytest-asyncio detected an unclosed event loop when tearing down the event_loop
-    fixture: %r
-    pytest-asyncio will close the event loop for you, but future versions of the
-    library will no longer do so. In order to ensure compatibility with future
-    versions, please make sure that:
-        1. Any custom "event_loop" fixture properly closes the loop after yielding it
-        2. The scopes of your custom "event_loop" fixtures do not overlap
-        3. Your code does not modify the event loop in async fixtures or tests
-    """
-)
-
-
 def _close_event_loop() -> None:
     policy = asyncio.get_event_loop_policy()
     try:
@@ -793,11 +779,6 @@ def _close_event_loop() -> None:
     except RuntimeError:
         loop = None
     if loop is not None:
-        if not loop.is_closed():
-            warnings.warn(
-                _UNCLOSED_EVENT_LOOP_WARNING % loop,
-                DeprecationWarning,
-            )
         loop.close()
 
 
