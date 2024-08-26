@@ -717,7 +717,6 @@ def pytest_fixture_setup(
         # see https://github.com/pytest-dev/pytest/issues/5848
         _add_finalizers(
             fixturedef,
-            _restore_event_loop_policy(asyncio.get_event_loop_policy()),
             _provide_clean_event_loop,
         )
         outcome = yield
@@ -750,21 +749,6 @@ def _add_finalizers(fixturedef: FixtureDef, *finalizers: Callable[[], object]) -
     """
     for finalizer in reversed(finalizers):
         fixturedef.addfinalizer(finalizer)
-
-
-def _restore_event_loop_policy(previous_policy) -> Callable[[], None]:
-    def _restore_policy():
-        # Close any event loop associated with the old loop policy
-        # to avoid ResourceWarnings in the _provide_clean_event_loop finalizer
-        try:
-            loop = _get_event_loop_no_warn(previous_policy)
-        except RuntimeError:
-            loop = None
-        if loop:
-            loop.close()
-        asyncio.set_event_loop_policy(previous_policy)
-
-    return _restore_policy
 
 
 def _provide_clean_event_loop() -> None:
@@ -918,13 +902,15 @@ def _retrieve_scope_root(
 
 
 @pytest.fixture
-def event_loop(request: FixtureRequest) -> Iterator[asyncio.AbstractEventLoop]:
+def event_loop(
+    request: FixtureRequest, event_loop_policy: AbstractEventLoopPolicy
+) -> Iterator[asyncio.AbstractEventLoop]:
     """Create an instance of the default event loop for each test case."""
-    new_loop_policy = request.getfixturevalue(event_loop_policy.__name__)
-    asyncio.set_event_loop_policy(new_loop_policy)
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+    new_loop_policy = event_loop_policy
+    with _temporary_event_loop_policy(new_loop_policy):
+        loop = asyncio.get_event_loop_policy().new_event_loop()
+        yield loop
+        loop.close()
 
 
 @pytest.fixture(scope="session")
