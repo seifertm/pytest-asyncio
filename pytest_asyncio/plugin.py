@@ -246,8 +246,6 @@ def _preprocess_async_fixtures(
                 or default_loop_scope
                 or fixturedef.scope
             )
-            if scope == "function" and "event_loop" not in fixturedef.argnames:
-                fixturedef.argnames += ("event_loop",)
             _make_asyncio_fixture_function(func, scope)
             if "request" not in fixturedef.argnames:
                 fixturedef.argnames += ("request",)
@@ -269,15 +267,12 @@ def _synchronize_async_fixture(fixturedef: FixtureDef) -> None:
 def _add_kwargs(
     func: Callable[..., Any],
     kwargs: Dict[str, Any],
-    event_loop: asyncio.AbstractEventLoop,
     request: FixtureRequest,
 ) -> Dict[str, Any]:
     sig = inspect.signature(func)
     ret = kwargs.copy()
     if "request" in sig.parameters:
         ret["request"] = request
-    if "event_loop" in sig.parameters:
-        ret["event_loop"] = event_loop
     return ret
 
 
@@ -308,7 +303,7 @@ def _wrap_asyncgen_fixture(fixturedef: FixtureDef) -> None:
         )
         event_loop = request.getfixturevalue(event_loop_fixture_id)
         kwargs.pop(event_loop_fixture_id, None)
-        gen_obj = func(**_add_kwargs(func, kwargs, event_loop, request))
+        gen_obj = func(**_add_kwargs(func, kwargs, request))
 
         async def setup():
             res = await gen_obj.__anext__()  # type: ignore[union-attr]
@@ -349,7 +344,7 @@ def _wrap_async_fixture(fixturedef: FixtureDef) -> None:
         kwargs.pop(event_loop_fixture_id, None)
 
         async def setup():
-            res = await func(**_add_kwargs(func, kwargs, event_loop, request))
+            res = await func(**_add_kwargs(func, kwargs, request))
             return res
 
         return event_loop.run_until_complete(setup())
