@@ -717,7 +717,6 @@ def pytest_fixture_setup(
         # see https://github.com/pytest-dev/pytest/issues/5848
         _add_finalizers(
             fixturedef,
-            _close_event_loop,
             _restore_event_loop_policy(asyncio.get_event_loop_policy()),
             _provide_clean_event_loop,
         )
@@ -751,16 +750,6 @@ def _add_finalizers(fixturedef: FixtureDef, *finalizers: Callable[[], object]) -
     """
     for finalizer in reversed(finalizers):
         fixturedef.addfinalizer(finalizer)
-
-
-def _close_event_loop() -> None:
-    policy = asyncio.get_event_loop_policy()
-    try:
-        loop = policy.get_event_loop()
-    except RuntimeError:
-        loop = None
-    if loop is not None:
-        loop.close()
 
 
 def _restore_event_loop_policy(previous_policy) -> Callable[[], None]:
