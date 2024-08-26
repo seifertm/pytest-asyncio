@@ -364,16 +364,12 @@ def _get_event_loop_fixture_id_for_async_fixture(
     loop_scope = (
         getattr(func, "_loop_scope", None) or default_loop_scope or request.scope
     )
-    if loop_scope == "function":
-        event_loop_fixture_id = "event_loop"
-    else:
-        event_loop_node = _retrieve_scope_root(request._pyfuncitem, loop_scope)
-        event_loop_fixture_id = event_loop_node.stash.get(
-            # Type ignored because of non-optimal mypy inference.
-            _event_loop_fixture_id,  # type: ignore[arg-type]
-            "",
-        )
-    assert event_loop_fixture_id
+    event_loop_node = _retrieve_scope_root(request._pyfuncitem, loop_scope)
+    event_loop_fixture_id = event_loop_node.stash.get(
+        # Type ignored because of non-optimal mypy inference.
+        _event_loop_fixture_id,  # type: ignore[arg-type]
+        "event_loop",
+    )
     return event_loop_fixture_id
 
 
@@ -413,6 +409,7 @@ class PytestAsyncioFunction(Function):
         )
         subclass_instance.own_markers = function.own_markers
         assert subclass_instance.own_markers == function.own_markers
+        subclass_instance.stash[_event_loop_fixture_id] = "event_loop"
         return subclass_instance
 
     @staticmethod
@@ -690,8 +687,6 @@ def pytest_generate_tests(metafunc: Metafunc) -> None:
     if not marker:
         return
     scope = _get_marked_loop_scope(marker)
-    if scope == "function":
-        return
     event_loop_node = _retrieve_scope_root(metafunc.definition, scope)
     event_loop_fixture_id = event_loop_node.stash.get(_event_loop_fixture_id, None)
 
@@ -873,11 +868,8 @@ def pytest_runtest_setup(item: pytest.Item) -> None:
     if marker is None:
         return
     scope = _get_marked_loop_scope(marker)
-    if scope != "function":
-        parent_node = _retrieve_scope_root(item, scope)
-        event_loop_fixture_id = parent_node.stash[_event_loop_fixture_id]
-    else:
-        event_loop_fixture_id = "event_loop"
+    parent_node = _retrieve_scope_root(item, scope)
+    event_loop_fixture_id = parent_node.stash.get(_event_loop_fixture_id, "event_loop")
     fixturenames = item.fixturenames  # type: ignore[attr-defined]
     if event_loop_fixture_id not in fixturenames:
         fixturenames.append(event_loop_fixture_id)
@@ -919,8 +911,11 @@ def _get_marked_loop_scope(asyncio_marker: Mark) -> _ScopeName:
     return scope
 
 
-def _retrieve_scope_root(item: Union[Collector, Item], scope: str) -> Collector:
+def _retrieve_scope_root(
+    item: Union[Collector, Item], scope: str
+) -> Union[Collector, Function]:
     node_type_by_scope = {
+        "function": Function,
         "class": Class,
         "module": Module,
         "package": Package,
@@ -929,7 +924,7 @@ def _retrieve_scope_root(item: Union[Collector, Item], scope: str) -> Collector:
     scope_root_type = node_type_by_scope[scope]
     for node in reversed(item.listchain()):
         if isinstance(node, scope_root_type):
-            assert isinstance(node, pytest.Collector)
+            assert isinstance(node, (Collector, Function))
             return node
     error_message = (
         f"{item.name} is marked to be run in an event loop with scope {scope}, "
