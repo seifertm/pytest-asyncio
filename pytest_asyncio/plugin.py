@@ -923,12 +923,6 @@ def event_loop(request: FixtureRequest) -> Iterator[asyncio.AbstractEventLoop]:
     new_loop_policy = request.getfixturevalue(event_loop_policy.__name__)
     asyncio.set_event_loop_policy(new_loop_policy)
     loop = asyncio.get_event_loop_policy().new_event_loop()
-    # Add a magic value to the event loop, so pytest-asyncio can determine if the
-    # event_loop fixture was overridden. Other implementations of event_loop don't
-    # set this value.
-    # The magic value must be set as part of the function definition, because pytest
-    # seems to have multiple instances of the same FixtureDef or fixture function
-    loop.__original_fixture_loop = True  # type: ignore[attr-defined]
     yield loop
     loop.close()
 
