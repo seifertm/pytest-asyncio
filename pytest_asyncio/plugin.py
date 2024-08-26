@@ -8,7 +8,6 @@ import inspect
 import socket
 import warnings
 from asyncio import AbstractEventLoopPolicy
-from textwrap import dedent
 from typing import (
     Any,
     AsyncIterator,
@@ -705,14 +704,6 @@ def pytest_generate_tests(metafunc: Metafunc) -> None:
             return
         fixturemanager = metafunc.config.pluginmanager.get_plugin("funcmanage")
         assert fixturemanager is not None
-        if "event_loop" in metafunc.fixturenames:
-            raise MultipleEventLoopsRequestedError(
-                _MULTIPLE_LOOPS_REQUESTED_ERROR.format(
-                    test_name=metafunc.definition.nodeid,
-                    scope=scope,
-                    scoped_loop_node=event_loop_node.nodeid,
-                ),
-            )
         # Add the scoped event loop fixture to Metafunc's list of fixture names and
         # fixturedefs and leave the actual parametrization to pytest
         # The fixture needs to be appended to avoid messing up the fixture evaluation
@@ -875,18 +866,6 @@ def wrap_in_sync(
 
     inner._raw_test_func = func  # type: ignore[attr-defined]
     return inner
-
-
-_MULTIPLE_LOOPS_REQUESTED_ERROR = dedent(
-    """\
-        Multiple asyncio event loops with different scopes have been requested
-        by {test_name}. The test explicitly requests the event_loop fixture, while
-        another event loop with {scope} scope is provided by {scoped_loop_node}.
-        Remove "event_loop" from the requested fixture in your test to run the test
-        in a {scope}-scoped event loop or remove the scope argument from the "asyncio"
-        mark to run the test in a function-scoped event loop.
-    """
-)
 
 
 def pytest_runtest_setup(item: pytest.Item) -> None:
