@@ -1,0 +1,1 @@
+Overridden *event_loop* fixtures no longer close the loop if the user fails to do so.
