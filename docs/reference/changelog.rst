@@ -2,6 +2,10 @@
 Changelog
 =========
 
+0.26.0 (2025-01-02)
+===================
+- BREAKING: Overridden *event_loop* fixtures no longer close the loop if the user fails to do so.
+
 0.25.1 (2025-01-02)
 ===================
 - Fixes an issue that caused a broken event loop when a function-scoped test was executed in between two tests with wider loop scope `#950 <https://github.com/pytest-dev/pytest-asyncio/issues/950>`_
