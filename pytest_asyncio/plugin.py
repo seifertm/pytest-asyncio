@@ -858,7 +858,6 @@ def pytest_fixture_setup(
         _add_finalizers(
             fixturedef,
             _restore_event_loop_policy(asyncio.get_event_loop_policy()),
-            _provide_clean_event_loop,
         )
         outcome = yield
         loop: asyncio.AbstractEventLoop = outcome.get_result()
@@ -923,23 +922,6 @@ def _restore_event_loop_policy(previous_policy) -> Callable[[], None]:
         asyncio.set_event_loop_policy(previous_policy)
 
     return _restore_policy
-
-
-def _provide_clean_event_loop() -> None:
-    # At this point, the event loop for the current thread is closed.
-    # When a user calls asyncio.get_event_loop(), they will get a closed loop.
-    # In order to avoid this side effect from pytest-asyncio, we need to replace
-    # the current loop with a fresh one.
-    # Note that we cannot set the loop to None, because get_event_loop only creates
-    # a new loop, when set_event_loop has not been called.
-    policy = asyncio.get_event_loop_policy()
-    try:
-        old_loop = _get_event_loop_no_warn(policy)
-    except RuntimeError:
-        old_loop = None
-    if old_loop is not None and not _is_pytest_asyncio_loop(old_loop):
-        new_loop = policy.new_event_loop()
-        policy.set_event_loop(new_loop)
 
 
 def _get_event_loop_no_warn(
