@@ -850,15 +850,6 @@ def pytest_fixture_setup(
 ) -> Generator[None, pluggy.Result, None]:
     """Adjust the event loop policy when an event loop is produced."""
     if fixturedef.argname == "event_loop":
-        # The use of a fixture finalizer is preferred over the
-        # pytest_fixture_post_finalizer hook. The fixture finalizer is invoked once
-        # for each fixture, whereas the hook may be invoked multiple times for
-        # any specific fixture.
-        # see https://github.com/pytest-dev/pytest/issues/5848
-        _add_finalizers(
-            fixturedef,
-            _restore_event_loop_policy(asyncio.get_event_loop_policy()),
-        )
         outcome = yield
         loop: asyncio.AbstractEventLoop = outcome.get_result()
         # Weird behavior was observed when checking for an attribute of FixtureDef.func
@@ -894,34 +885,6 @@ def _make_pytest_asyncio_loop(loop: AbstractEventLoop) -> AbstractEventLoop:
 
 def _is_pytest_asyncio_loop(loop: AbstractEventLoop) -> bool:
     return getattr(loop, "__pytest_asyncio", False)
-
-
-def _add_finalizers(fixturedef: FixtureDef, *finalizers: Callable[[], object]) -> None:
-    """
-    Registers the specified fixture finalizers in the fixture.
-
-    Finalizers need to be specified in the exact order in which they should be invoked.
-
-    :param fixturedef: Fixture definition which finalizers should be added to
-    :param finalizers: Finalizers to be added
-    """
-    for finalizer in reversed(finalizers):
-        fixturedef.addfinalizer(finalizer)
-
-
-def _restore_event_loop_policy(previous_policy) -> Callable[[], None]:
-    def _restore_policy():
-        # Close any event loop associated with the old loop policy
-        # to avoid ResourceWarnings in the _provide_clean_event_loop finalizer
-        try:
-            loop = _get_event_loop_no_warn(previous_policy)
-        except RuntimeError:
-            loop = None
-        if loop and not _is_pytest_asyncio_loop(loop):
-            loop.close()
-        asyncio.set_event_loop_policy(previous_policy)
-
-    return _restore_policy
 
 
 def _get_event_loop_no_warn(
