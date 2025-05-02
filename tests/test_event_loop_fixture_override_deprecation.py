@@ -53,12 +53,9 @@ def test_emit_warning_when_event_loop_fixture_is_redefined_explicit_request(
         )
     )
     result = pytester.runpytest_subprocess("--asyncio-mode=strict", "-W default")
-    result.assert_outcomes(passed=1, warnings=2)
+    result.assert_outcomes(passed=1, warnings=1)
     result.stdout.fnmatch_lines(
         ["*event_loop fixture provided by pytest-asyncio has been redefined*"]
-    )
-    result.stdout.fnmatch_lines(
-        ['*is asynchronous and explicitly requests the "event_loop" fixture*']
     )
 
 

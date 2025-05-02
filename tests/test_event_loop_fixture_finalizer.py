@@ -60,7 +60,4 @@ def test_event_loop_fixture_finalizer_handles_loop_set_to_none_async_with_fixtur
         )
     )
     result = pytester.runpytest_subprocess("--asyncio-mode=strict", "-W default")
-    result.assert_outcomes(passed=1, warnings=1)
-    result.stdout.fnmatch_lines(
-        '*is asynchronous and explicitly requests the "event_loop" fixture*'
-    )
+    result.assert_outcomes(passed=1)

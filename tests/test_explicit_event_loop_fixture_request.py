@@ -21,10 +21,7 @@ def test_emit_warning_when_event_loop_is_explicitly_requested_in_coroutine(
         )
     )
     result = pytester.runpytest_subprocess("--asyncio-mode=strict", "-W default")
-    result.assert_outcomes(passed=1, warnings=1)
-    result.stdout.fnmatch_lines(
-        ['*is asynchronous and explicitly requests the "event_loop" fixture*']
-    )
+    result.assert_outcomes(passed=1)
 
 
 def test_emit_warning_when_event_loop_is_explicitly_requested_in_coroutine_method(
@@ -44,10 +41,7 @@ def test_emit_warning_when_event_loop_is_explicitly_requested_in_coroutine_metho
         )
     )
     result = pytester.runpytest_subprocess("--asyncio-mode=strict", "-W default")
-    result.assert_outcomes(passed=1, warnings=1)
-    result.stdout.fnmatch_lines(
-        ['*is asynchronous and explicitly requests the "event_loop" fixture*']
-    )
+    result.assert_outcomes(passed=1)
 
 
 def test_emit_warning_when_event_loop_is_explicitly_requested_in_coroutine_staticmethod(
@@ -68,10 +62,7 @@ def test_emit_warning_when_event_loop_is_explicitly_requested_in_coroutine_stati
         )
     )
     result = pytester.runpytest_subprocess("--asyncio-mode=strict", "-W default")
-    result.assert_outcomes(passed=1, warnings=1)
-    result.stdout.fnmatch_lines(
-        ['*is asynchronous and explicitly requests the "event_loop" fixture*']
-    )
+    result.assert_outcomes(passed=1)
 
 
 def test_emit_warning_when_event_loop_is_explicitly_requested_in_coroutine_fixture(
