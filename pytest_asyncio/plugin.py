@@ -863,15 +863,6 @@ def pytest_fixture_setup(
                 DeprecationWarning,
             )
         policy = asyncio.get_event_loop_policy()
-        try:
-            old_loop = _get_event_loop_no_warn(policy)
-            if old_loop is not loop and not _is_pytest_asyncio_loop(old_loop):
-                old_loop.close()
-        except RuntimeError:
-            # Either the current event loop has been set to None
-            # or the loop policy doesn't specify to create new loops
-            # or we're not in the main thread
-            pass
         policy.set_event_loop(loop)
         return
 
