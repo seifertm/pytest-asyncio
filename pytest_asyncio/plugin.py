@@ -42,6 +42,7 @@ from pytest import (
     Item,
     Mark,
     Metafunc,
+    MonkeyPatch,
     Parser,
     PytestCollectionWarning,
     PytestDeprecationWarning,
@@ -492,8 +493,9 @@ class Coroutine(PytestAsyncioFunction):
         return inspect.iscoroutinefunction(func)
 
     def runtest(self) -> None:
-        self.obj = wrap_in_sync(self.obj)
-        super().runtest()
+        with MonkeyPatch.context() as patched:
+            patched.setattr(self, "obj", wrap_in_sync(self.obj))
+            super().runtest()
 
 
 class AsyncGenerator(PytestAsyncioFunction):
@@ -532,8 +534,9 @@ class AsyncStaticMethod(PytestAsyncioFunction):
         )
 
     def runtest(self) -> None:
-        self.obj = wrap_in_sync(self.obj)
-        super().runtest()
+        with MonkeyPatch.context() as patched:
+            patched.setattr(self, "obj", wrap_in_sync(self.obj))
+            super().runtest()
 
 
 class AsyncHypothesisTest(PytestAsyncioFunction):
@@ -552,10 +555,13 @@ class AsyncHypothesisTest(PytestAsyncioFunction):
         )
 
     def runtest(self) -> None:
-        self.obj.hypothesis.inner_test = wrap_in_sync(
-            self.obj.hypothesis.inner_test,
-        )
-        super().runtest()
+        with MonkeyPatch.context() as patched:
+            patched.setattr(
+                self.obj.hypothesis,
+                "inner_test",
+                wrap_in_sync(self.obj.hypothesis.inner_test),
+            )
+            super().runtest()
 
 
 _HOLDER: set[FixtureDef] = set()
