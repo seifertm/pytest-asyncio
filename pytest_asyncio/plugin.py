@@ -35,7 +35,6 @@ import pluggy
 import pytest
 from _pytest.scope import Scope
 from pytest import (
-    Collector,
     Config,
     FixtureDef,
     FixtureRequest,
@@ -230,37 +229,29 @@ def pytest_report_header(config: Config) -> list[str]:
     ]
 
 
-def _preprocess_async_fixtures(
-    collector: Collector,
-    processed_fixturedefs: set[FixtureDef],
-) -> None:
-    config = collector.config
-    default_loop_scope = config.getini("asyncio_default_fixture_loop_scope")
+def pytest_fixture_setup(
+    fixturedef: FixtureDef, request: FixtureRequest
+) -> object | None:
+    func = fixturedef.func
+    if fixturedef in _HOLDER or not _is_coroutine_or_asyncgen(func):
+        return None
+    config = request.config
     asyncio_mode = _get_asyncio_mode(config)
-    fixturemanager = config.pluginmanager.get_plugin("funcmanage")
-    assert fixturemanager is not None
-    for fixtures in fixturemanager._arg2fixturedefs.values():
-        for fixturedef in fixtures:
-            func = fixturedef.func
-            if fixturedef in processed_fixturedefs or not _is_coroutine_or_asyncgen(
-                func
-            ):
-                continue
-            if asyncio_mode == Mode.STRICT and not _is_asyncio_fixture_function(func):
-                # Ignore async fixtures without explicit asyncio mark in strict mode
-                # This applies to pytest_trio fixtures, for example
-                continue
-            loop_scope = (
-                getattr(func, "_loop_scope", None)
-                or default_loop_scope
-                or fixturedef.scope
-            )
-            _make_asyncio_fixture_function(func, loop_scope)
-            if "request" not in fixturedef.argnames:
-                fixturedef.argnames += ("request",)
-            _synchronize_async_fixture(fixturedef)
-            assert _is_asyncio_fixture_function(fixturedef.func)
-            processed_fixturedefs.add(fixturedef)
+    if asyncio_mode == Mode.STRICT and not _is_asyncio_fixture_function(func):
+        # Ignore async fixtures without explicit asyncio mark in strict mode
+        # This applies to pytest_trio fixtures, for example
+        return None
+    default_loop_scope = config.getini("asyncio_default_fixture_loop_scope")
+    loop_scope = (
+        getattr(func, "_loop_scope", None) or default_loop_scope or fixturedef.scope
+    )
+    _make_asyncio_fixture_function(func, loop_scope)
+    if "request" not in fixturedef.argnames:
+        fixturedef.argnames += ("request",)  # type: ignore[misc]
+    _synchronize_async_fixture(fixturedef)
+    assert _is_asyncio_fixture_function(fixturedef.func)
+    _HOLDER.add(fixturedef)
+    return None
 
 
 def _synchronize_async_fixture(fixturedef: FixtureDef) -> None:
@@ -574,19 +565,6 @@ class AsyncHypothesisTest(PytestAsyncioFunction):
 
 
 _HOLDER: set[FixtureDef] = set()
-
-
-# The function name needs to start with "pytest_"
-# see https://github.com/pytest-dev/pytest/issues/11307
-@pytest.hookimpl(specname="pytest_pycollect_makeitem", tryfirst=True)
-def pytest_pycollect_makeitem_preprocess_async_fixtures(
-    collector: pytest.Module | pytest.Class, name: str, obj: object
-) -> pytest.Item | pytest.Collector | list[pytest.Item | pytest.Collector] | None:
-    """A pytest hook to collect asyncio coroutines."""
-    if not collector.funcnamefilter(name):
-        return None
-    _preprocess_async_fixtures(collector, _HOLDER)
-    return None
 
 
 # The function name needs to start with "pytest_"
