@@ -492,10 +492,7 @@ class Coroutine(PytestAsyncioFunction):
         return inspect.iscoroutinefunction(func)
 
     def runtest(self) -> None:
-        self.obj = wrap_in_sync(
-            # https://github.com/pytest-dev/pytest-asyncio/issues/596
-            self.obj,  # type: ignore[has-type]
-        )
+        self.obj = wrap_in_sync(self.obj)
         super().runtest()
 
 
@@ -535,10 +532,7 @@ class AsyncStaticMethod(PytestAsyncioFunction):
         )
 
     def runtest(self) -> None:
-        self.obj = wrap_in_sync(
-            # https://github.com/pytest-dev/pytest-asyncio/issues/596
-            self.obj,  # type: ignore[has-type]
-        )
+        self.obj = wrap_in_sync(self.obj)
         super().runtest()
 
 
