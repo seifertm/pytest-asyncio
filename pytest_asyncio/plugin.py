@@ -249,18 +249,18 @@ def pytest_fixture_setup(
     _make_asyncio_fixture_function(func, loop_scope)
     if "request" not in fixturedef.argnames:
         fixturedef.argnames += ("request",)  # type: ignore[misc]
-    _synchronize_async_fixture(fixturedef)
+    fixturedef.func = _fixture_synchronizer(fixturedef)  # type: ignore[misc]
     assert _is_asyncio_fixture_function(fixturedef.func)
     _HOLDER.add(fixturedef)
     return None
 
 
-def _synchronize_async_fixture(fixturedef: FixtureDef) -> None:
-    """Wraps the fixture function of an async fixture in a synchronous function."""
+def _fixture_synchronizer(fixturedef: FixtureDef) -> Callable:  # type: ignore[return]
+    """Returns a synchronous function wrapping an async fixture."""
     if inspect.isasyncgenfunction(fixturedef.func):
-        _wrap_asyncgen_fixture(fixturedef)
+        return _wrap_asyncgen_fixture(fixturedef)
     elif inspect.iscoroutinefunction(fixturedef.func):
-        _wrap_async_fixture(fixturedef)
+        return _wrap_async_fixture(fixturedef)
 
 
 def _add_kwargs(
@@ -291,7 +291,7 @@ def _perhaps_rebind_fixture_func(func: _T, instance: Any | None) -> _T:
     return func
 
 
-def _wrap_asyncgen_fixture(fixturedef: FixtureDef) -> None:
+def _wrap_asyncgen_fixture(fixturedef: FixtureDef) -> Callable:
     fixture = fixturedef.func
 
     @functools.wraps(fixture)
@@ -335,10 +335,10 @@ def _wrap_asyncgen_fixture(fixturedef: FixtureDef) -> None:
         request.addfinalizer(finalizer)
         return result
 
-    fixturedef.func = _asyncgen_fixture_wrapper  # type: ignore[misc]
+    return _asyncgen_fixture_wrapper
 
 
-def _wrap_async_fixture(fixturedef: FixtureDef) -> None:
+def _wrap_async_fixture(fixturedef: FixtureDef) -> Callable:
     fixture = fixturedef.func
 
     @functools.wraps(fixture)
@@ -372,7 +372,7 @@ def _wrap_async_fixture(fixturedef: FixtureDef) -> None:
 
         return result
 
-    fixturedef.func = _async_fixture_wrapper  # type: ignore[misc]
+    return _async_fixture_wrapper
 
 
 def _get_event_loop_fixture_id_for_async_fixture(
