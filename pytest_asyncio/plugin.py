@@ -11,7 +11,7 @@ import inspect
 import socket
 import sys
 import warnings
-from asyncio import AbstractEventLoopPolicy
+from asyncio import AbstractEventLoop, AbstractEventLoopPolicy
 from collections.abc import (
     AsyncIterator,
     Awaitable,
@@ -493,8 +493,9 @@ class Coroutine(PytestAsyncioFunction):
         return inspect.iscoroutinefunction(func)
 
     def runtest(self) -> None:
+        loop = _get_event_loop_no_warn()
         with MonkeyPatch.context() as patched:
-            patched.setattr(self, "obj", wrap_in_sync(self.obj))
+            patched.setattr(self, "obj", wrap_in_sync(self.obj, loop))
             super().runtest()
 
 
@@ -534,8 +535,9 @@ class AsyncStaticMethod(PytestAsyncioFunction):
         )
 
     def runtest(self) -> None:
+        loop = _get_event_loop_no_warn()
         with MonkeyPatch.context() as patched:
-            patched.setattr(self, "obj", wrap_in_sync(self.obj))
+            patched.setattr(self, "obj", wrap_in_sync(self.obj, loop))
             super().runtest()
 
 
@@ -555,11 +557,12 @@ class AsyncHypothesisTest(PytestAsyncioFunction):
         )
 
     def runtest(self) -> None:
+        loop = _get_event_loop_no_warn()
         with MonkeyPatch.context() as patched:
             patched.setattr(
                 self.obj.hypothesis,
                 "inner_test",
-                wrap_in_sync(self.obj.hypothesis.inner_test),
+                wrap_in_sync(self.obj.hypothesis.inner_test, loop),
             )
             super().runtest()
 
@@ -712,19 +715,19 @@ def pytest_pyfunc_call(pyfuncitem: Function) -> object | None:
 
 def wrap_in_sync(
     func: Callable[..., Awaitable[Any]],
+    loop: AbstractEventLoop,
 ):
     """
     Return a sync wrapper around an async function executing it in the
-    current event loop.
+    specified event loop.
     """
 
     @functools.wraps(func)
     def inner(*args, **kwargs):
         coro = func(*args, **kwargs)
-        _loop = _get_event_loop_no_warn()
-        task = asyncio.ensure_future(coro, loop=_loop)
+        task = asyncio.ensure_future(coro, loop=loop)
         try:
-            _loop.run_until_complete(task)
+            loop.run_until_complete(task)
         except BaseException:
             # run_until_complete doesn't get the result from exceptions
             # that are not subclasses of `Exception`. Consume all
