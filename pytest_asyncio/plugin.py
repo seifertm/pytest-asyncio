@@ -634,7 +634,7 @@ def pytest_pycollect_makeitem_convert_async_functions_to_subclass(
 @contextlib.contextmanager
 def _temporary_event_loop_policy(
     policy: AbstractEventLoopPolicy,
-    loop_facotry: Callable[..., AbstractEventLoop] | None,
+    loop_factory: Callable[..., AbstractEventLoop] | None,
 ) -> Iterator[None]:
 
     old_loop_policy = _get_event_loop_policy()
@@ -645,8 +645,8 @@ def _temporary_event_loop_policy(
     # XXX: For some reason this function can override runner's
     # _loop_factory (At least observed on backported versions of Runner)
     # so we need to re-override if existing...
-    if loop_facotry:
-        _loop = loop_facotry()
+    if loop_factory:
+        _loop = loop_factory()
         _set_event_loop(_loop)
     else:
         _loop = None
