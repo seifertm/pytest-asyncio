@@ -7,6 +7,7 @@ import contextlib
 import contextvars
 import enum
 import functools
+import importlib
 import inspect
 import socket
 import sys
@@ -125,6 +126,12 @@ def pytest_addoption(parser: Parser, pluginmanager: PytestPluginManager) -> None
         type="string",
         help="default scope of the asyncio event loop used to execute tests",
         default="function",
+    )
+    parser.addini(
+        "asyncio_loop_factory",
+        type="string",
+        help="Callable used to create new instances of the asyncio event loop",
+        default="asyncio.new_event_loop",
     )
 
 
@@ -834,30 +841,14 @@ Here is the traceback of the exception triggered during teardown:
 
 
 def _get_loop_factory(
-    request: FixtureRequest,
-) -> Callable[[], AbstractEventLoop] | None:
-    loop_factories = []
-    asyncio_mark = request._pyfuncitem.get_closest_marker("asyncio")
-    if asyncio_mark is not None:
-        # The loop_factory is defined on an asyncio marker
-        factory = asyncio_mark.kwargs.get("loop_factory", None)
-        loop_factories.append(factory)
-    # The loop_factory is defined in a transitive fixture
-    current_request = request
-    for r in request._iter_chain():
-        current_request = r
-        loop_factory = getattr(current_request._fixturedef.func, "_loop_factory", None)
-        loop_factories.append(loop_factory)
-    defined_loop_factories = [factory for factory in loop_factories if factory] or [
-        None
-    ]
-    print(defined_loop_factories)
-    if len(defined_loop_factories) > 1:
-        print(defined_loop_factories)
-        raise pytest.UsageError(
-            "Multiple loop factories defined for {request.scope}-scoped loop."
-        )
-    return defined_loop_factories[0]
+    config: Config,
+) -> Callable[[], AbstractEventLoop]:
+    loop_factory = config.getini("asyncio_loop_factory")
+    assert loop_factory, "Expected asyncio_loop_factory to have a default value"
+    module_name, symbol_name = loop_factory.rsplit(sep=".", maxsplit=1)
+    module = importlib.import_module(module_name)
+    loop_factory = getattr(module, symbol_name)
+    return loop_factory
 
 
 def _create_scoped_runner_fixture(scope: _ScopeName) -> Callable:
@@ -872,7 +863,7 @@ def _create_scoped_runner_fixture(scope: _ScopeName) -> Callable:
 
         # We need to get the factory now because
         # _temporary_event_loop_policy can override the Runner
-        factory = _get_loop_factory(request)
+        factory = _get_loop_factory(request.config)
         debug_mode = _get_asyncio_debug(request.config)
         with _temporary_event_loop_policy(new_loop_policy, factory):
             runner = Runner(debug=debug_mode, loop_factory=factory).__enter__()
