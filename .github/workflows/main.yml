@@ -100,6 +100,28 @@ jobs:
         path: coverage/coverage.*
         if-no-files-found: error
 
+  test-pytest-dev:
+    name: ubuntu - Python ${{ env.PYTHON_LATEST }} - pytest main
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+      with:
+        python-version: ${{ env.PYTHON_LATEST }}
+    - name: Install dependencies
+      run: |
+        python -VV
+        python -m site
+        python -m pip install --upgrade pip
+        python -m pip install --upgrade \
+          ".[testing]" \
+          "pytest @ git+https://github.com/pytest-dev/pytest.git"
+    - name: Run tests against pytest main
+      run: make test
+
   lint-github-actions:
     name: Lint GitHub Actions
     permissions:
