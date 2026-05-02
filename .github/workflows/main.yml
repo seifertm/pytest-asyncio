@@ -101,7 +101,7 @@ jobs:
         if-no-files-found: error
 
   test-pytest-dev:
-    name: ubuntu - Python ${{ env.PYTHON_LATEST }} - pytest main
+    name: ubuntu - Python latest - pytest main
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -116,11 +116,9 @@ jobs:
         python -VV
         python -m site
         python -m pip install --upgrade pip
-        python -m pip install --upgrade \
-          ".[testing]" \
-          "pytest @ git+https://github.com/pytest-dev/pytest.git"
+        python -m pip install --upgrade tox
     - name: Run tests against pytest main
-      run: make test
+      run: python -m tox run -e pytest-dev
 
   lint-github-actions:
     name: Lint GitHub Actions
