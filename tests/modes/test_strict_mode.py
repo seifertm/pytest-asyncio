@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from textwrap import dedent
 
+import pytest
 from pytest import Pytester, version_tuple as pytest_version
 
 
@@ -82,6 +83,10 @@ def test_strict_mode_ignores_unmarked_coroutine(pytester: Pytester):
     result.stdout.fnmatch_lines(["*async def functions are not natively supported*"])
 
 
+@pytest.mark.skipif(
+    pytest_version >= (9, 1, 0),
+    reason="pytest >=9.1 converts unhandled async fixtures to errors",
+)
 def test_strict_mode_ignores_unmarked_fixture(pytester: Pytester):
     pytester.makeini("[pytest]\nasyncio_default_fixture_loop_scope = function")
     pytester.makepyfile(dedent("""\
@@ -109,6 +114,10 @@ def test_strict_mode_ignores_unmarked_fixture(pytester: Pytester):
     )
 
 
+@pytest.mark.skipif(
+    pytest_version >= (9, 1, 0),
+    reason="pytest >=9.1 converts unhandled async fixtures to errors",
+)
 def test_strict_mode_marked_test_unmarked_fixture_warning(pytester: Pytester):
     pytester.makeini("[pytest]\nasyncio_default_fixture_loop_scope = function")
     pytester.makepyfile(dedent("""\
@@ -152,6 +161,10 @@ def test_strict_mode_marked_test_unmarked_fixture_warning(pytester: Pytester):
 
 
 # autouse is not handled in any special way currently
+@pytest.mark.skipif(
+    pytest_version >= (9, 1, 0),
+    reason="pytest >=9.1 converts unhandled async fixtures to errors",
+)
 def test_strict_mode_marked_test_unmarked_autouse_fixture_warning(pytester: Pytester):
     pytester.makeini("[pytest]\nasyncio_default_fixture_loop_scope = function")
     pytester.makepyfile(dedent("""\
